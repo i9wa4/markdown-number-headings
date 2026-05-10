@@ -49,6 +49,21 @@ func TestFormatTablesUsesDisplayWidth(t *testing.T) {
 	}
 }
 
+func TestFormatTablesPreservesEscapedPipes(t *testing.T) {
+	input := "| A | B |\n| --- | --- |\n| `x\\|y` | z |\n"
+	want := "| A      | B   |\n| ------ | --- |\n| `x\\|y` | z   |\n"
+	if got := FormatTables(input); got != want {
+		t.Fatalf("FormatTables escaped-pipe mismatch\nwant:\n%s\ngot:\n%s", want, got)
+	}
+}
+
+func TestFormatTablesIgnoresPipeLessSeparator(t *testing.T) {
+	input := "- item\n---\n"
+	if got := FormatTables(input); got != input {
+		t.Fatalf("FormatTables pipe-less separator mismatch\nwant:\n%s\ngot:\n%s", input, got)
+	}
+}
+
 func TestFormatTablesPreservesFencedTables(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -65,6 +80,20 @@ func TestFormatTablesPreservesFencedTables(t *testing.T) {
 				t.Fatalf("FormatTables fenced-table mismatch\nwant:\n%s\ngot:\n%s", want, got)
 			}
 		})
+	}
+}
+
+func TestDocumentFormattingPreservesFrontmatter(t *testing.T) {
+	input := "---\nparams:\n  skills:\n    - postman-session-operator\n---\n\n# Title\n"
+	want := input
+	if got := DocumentFormattingWithoutHeadingNumbering()(input); got != want {
+		t.Fatalf("DocumentFormattingWithoutHeadingNumbering frontmatter mismatch\nwant:\n%s\ngot:\n%s", want, got)
+	}
+
+	numberedInput := "---\ntitle: \"## Not a heading\"\n---\n\n## Title\n"
+	numberedWant := "---\ntitle: \"## Not a heading\"\n---\n\n## 1. Title\n"
+	if got := DocumentFormatting(Options{Shift: 1})(numberedInput); got != numberedWant {
+		t.Fatalf("DocumentFormatting frontmatter mismatch\nwant:\n%s\ngot:\n%s", numberedWant, got)
 	}
 }
 

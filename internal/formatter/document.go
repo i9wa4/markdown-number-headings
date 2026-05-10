@@ -1,9 +1,12 @@
 package formatter
 
+import "strings"
+
 type document struct {
 	lines       []string
 	trailing    bool
 	fenced      []bool
+	frontmatter []bool
 	fencedDirty bool
 }
 
@@ -36,6 +39,7 @@ func (doc *document) String() string {
 
 func (doc *document) refreshFences() {
 	doc.fenced = mapFenceLines(doc.lines)
+	doc.frontmatter = mapFrontmatterLines(doc.lines)
 	doc.fencedDirty = false
 }
 
@@ -49,6 +53,17 @@ func (doc *document) inFence(index int) bool {
 		doc.refreshFences()
 	}
 	return index >= 0 && index < len(doc.fenced) && doc.fenced[index]
+}
+
+func (doc *document) inFrontmatter(index int) bool {
+	if doc.fencedDirty {
+		doc.refreshFences()
+	}
+	return index >= 0 && index < len(doc.frontmatter) && doc.frontmatter[index]
+}
+
+func (doc *document) inProtectedBlock(index int) bool {
+	return doc.inFence(index) || doc.inFrontmatter(index)
 }
 
 func normalizeFinalNewlinePass() documentPass {
@@ -87,4 +102,21 @@ func mapFenceLines(lines []string) []bool {
 	}
 
 	return fenced
+}
+
+func mapFrontmatterLines(lines []string) []bool {
+	frontmatter := make([]bool, len(lines))
+	if len(lines) < 2 || strings.TrimSpace(lines[0]) != "---" {
+		return frontmatter
+	}
+	for i := 1; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) != "---" {
+			continue
+		}
+		for j := 0; j <= i; j++ {
+			frontmatter[j] = true
+		}
+		return frontmatter
+	}
+	return frontmatter
 }

@@ -10,14 +10,14 @@ func tableAlignmentPass() documentPass {
 	return func(doc *document) {
 		var out []string
 		for i := 0; i < len(doc.lines); {
-			if doc.inFence(i) {
+			if doc.inProtectedBlock(i) {
 				out = append(out, doc.lines[i])
 				i++
 				continue
 			}
-			if i+1 < len(doc.lines) && !doc.inFence(i+1) && isTableSeparator(doc.lines[i+1]) {
+			if i+1 < len(doc.lines) && isTableRow(doc.lines[i]) && !doc.inProtectedBlock(i+1) && isTableSeparator(doc.lines[i+1]) {
 				end := i + 2
-				for end < len(doc.lines) && !doc.inFence(end) && isTableRow(doc.lines[end]) {
+				for end < len(doc.lines) && !doc.inProtectedBlock(end) && isTableRow(doc.lines[end]) {
 					end++
 				}
 				out = append(out, formatTableBlock(doc.lines[i:end])...)
@@ -68,13 +68,66 @@ func formatTableBlock(block []string) []string {
 
 func splitTableRow(line string) []string {
 	trimmed := strings.TrimSpace(line)
-	trimmed = strings.TrimPrefix(trimmed, "|")
-	trimmed = strings.TrimSuffix(trimmed, "|")
-	parts := strings.Split(trimmed, "|")
+	parts := splitTableCells(trimmed)
+	if len(parts) > 0 && strings.TrimSpace(parts[0]) == "" {
+		parts = parts[1:]
+	}
+	if len(parts) > 0 && strings.TrimSpace(parts[len(parts)-1]) == "" {
+		parts = parts[:len(parts)-1]
+	}
 	for i := range parts {
 		parts[i] = strings.TrimSpace(parts[i])
 	}
 	return parts
+}
+
+func splitTableCells(line string) []string {
+	parts := []string{}
+	var cell strings.Builder
+	codeTicks := 0
+
+	for i := 0; i < len(line); {
+		switch line[i] {
+		case '\\':
+			cell.WriteByte(line[i])
+			i++
+			if i < len(line) {
+				cell.WriteByte(line[i])
+				i++
+			}
+		case '`':
+			ticks := countBackticks(line[i:])
+			cell.WriteString(line[i : i+ticks])
+			if codeTicks == ticks {
+				codeTicks = 0
+			} else if codeTicks == 0 {
+				codeTicks = ticks
+			}
+			i += ticks
+		case '|':
+			if codeTicks == 0 {
+				parts = append(parts, cell.String())
+				cell.Reset()
+				i++
+				continue
+			}
+			cell.WriteByte(line[i])
+			i++
+		default:
+			cell.WriteByte(line[i])
+			i++
+		}
+	}
+	parts = append(parts, cell.String())
+	return parts
+}
+
+func countBackticks(s string) int {
+	count := 0
+	for count < len(s) && s[count] == '`' {
+		count++
+	}
+	return count
 }
 
 func formatDataRow(row []string, widths []int) string {
@@ -107,10 +160,13 @@ func formatSeparator(widths []int, aligns []string) string {
 }
 
 func isTableRow(line string) bool {
-	return strings.Contains(line, "|")
+	return len(splitTableCells(strings.TrimSpace(line))) > 1
 }
 
 func isTableSeparator(line string) bool {
+	if !isTableRow(line) {
+		return false
+	}
 	cells := splitTableRow(line)
 	if len(cells) == 0 {
 		return false

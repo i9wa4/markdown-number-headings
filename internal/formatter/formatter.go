@@ -28,7 +28,7 @@ func headingNumberingPass(opts Options) documentPass {
 		counts := make([]int, 6)
 
 		for i, line := range doc.lines {
-			if doc.inFence(i) {
+			if doc.inProtectedBlock(i) {
 				continue
 			}
 
@@ -55,7 +55,7 @@ func headingNumberingPass(opts Options) documentPass {
 func headingNumberRemovalPass() documentPass {
 	return func(doc *document) {
 		for i, line := range doc.lines {
-			if doc.inFence(i) {
+			if doc.inProtectedBlock(i) {
 				continue
 			}
 			h, ok := parseHeading(line)
