@@ -87,6 +87,65 @@ func TestDocumentFormattingWithoutHeadingNumberingPreservesFencedTables(t *testi
 	}
 }
 
+func TestDocumentFormattingNormalizesFinalNewline(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "final heading no newline",
+			input: "# Final",
+			want:  "# Final\n",
+		},
+		{
+			name:  "final heading one newline",
+			input: "# Final\n",
+			want:  "# Final\n",
+		},
+		{
+			name:  "final heading multiple blank lines",
+			input: "# Final\n\n\n",
+			want:  "# Final\n",
+		},
+		{
+			name:  "body no newline",
+			input: "body",
+			want:  "body\n",
+		},
+		{
+			name:  "body one newline",
+			input: "body\n",
+			want:  "body\n",
+		},
+		{
+			name:  "body multiple blank lines",
+			input: "body\n\n\n",
+			want:  "body\n",
+		},
+		{
+			name:  "heading followed by body no newline",
+			input: "# Title\nbody",
+			want:  "# Title\n\nbody\n",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := DocumentFormattingWithoutHeadingNumbering()(tc.input); got != tc.want {
+				t.Fatalf("want %q got %q", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestDocumentFormattingNumbersFinalHeadingWithOneNewline(t *testing.T) {
+	input := "## Final"
+	want := "## 1. Final\n"
+	if got := DocumentFormatting(Options{Shift: 1})(input); got != want {
+		t.Fatalf("want %q got %q", want, got)
+	}
+}
+
 func TestNormalizeHeadingSpacingFixture(t *testing.T) {
 	input := readFixture(t, "heading-spacing.input.golden")
 	want := readFixture(t, "heading-spacing.formatted.golden")

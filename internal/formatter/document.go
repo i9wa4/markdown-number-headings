@@ -51,6 +51,16 @@ func (doc *document) inFence(index int) bool {
 	return index >= 0 && index < len(doc.fenced) && doc.fenced[index]
 }
 
+func normalizeFinalNewlinePass() documentPass {
+	return func(doc *document) {
+		for len(doc.lines) > 0 && isBlankLine(doc.lines[len(doc.lines)-1]) {
+			doc.lines = doc.lines[:len(doc.lines)-1]
+			doc.fencedDirty = true
+		}
+		doc.trailing = len(doc.lines) > 0
+	}
+}
+
 func mapFenceLines(lines []string) []bool {
 	fenced := make([]bool, len(lines))
 	inFence := false

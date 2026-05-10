@@ -20,13 +20,13 @@ func HeadingNumbering(opts Options) Pass {
 
 func DocumentFormatting(opts Options) Pass {
 	return func(input string) string {
-		return applyDocument(input, headingNumberingPass(opts), tableAlignmentPass(), headingSpacingPass())
+		return applyDocument(input, headingNumberingPass(opts), tableAlignmentPass(), headingSpacingPass(), normalizeFinalNewlinePass())
 	}
 }
 
 func DocumentFormattingWithoutHeadingNumbering() Pass {
 	return func(input string) string {
-		return applyDocument(input, tableAlignmentPass(), headingSpacingPass())
+		return applyDocument(input, tableAlignmentPass(), headingSpacingPass(), normalizeFinalNewlinePass())
 	}
 }
 

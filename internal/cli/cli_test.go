@@ -76,6 +76,16 @@ func TestDefaultFormatRunsAllPasses(t *testing.T) {
 	}
 }
 
+func TestDefaultFormatNormalizesFinalNewline(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if err := Run(nil, strings.NewReader("## Final"), &stdout, &stderr); err != nil {
+		t.Fatalf("%v stderr=%s", err, stderr.String())
+	}
+	if stdout.String() != "## 1. Final\n" {
+		t.Fatalf("unexpected stdout: %q", stdout.String())
+	}
+}
+
 func TestFileWriteMode(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "doc.md")
 	if err := os.WriteFile(path, []byte("## One\n"), 0o644); err != nil {
