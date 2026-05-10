@@ -3,22 +3,32 @@ package formatter
 import "strings"
 
 func FormatTables(input string) string {
-	lines, trailing := splitLines(input)
-	var out []string
-	for i := 0; i < len(lines); {
-		if i+1 < len(lines) && isTableSeparator(lines[i+1]) {
-			end := i + 2
-			for end < len(lines) && isTableRow(lines[end]) {
-				end++
+	return applyDocument(input, tableAlignmentPass())
+}
+
+func tableAlignmentPass() documentPass {
+	return func(doc *document) {
+		var out []string
+		for i := 0; i < len(doc.lines); {
+			if doc.inFence(i) {
+				out = append(out, doc.lines[i])
+				i++
+				continue
 			}
-			out = append(out, formatTableBlock(lines[i:end])...)
-			i = end
-			continue
+			if i+1 < len(doc.lines) && !doc.inFence(i+1) && isTableSeparator(doc.lines[i+1]) {
+				end := i + 2
+				for end < len(doc.lines) && !doc.inFence(end) && isTableRow(doc.lines[end]) {
+					end++
+				}
+				out = append(out, formatTableBlock(doc.lines[i:end])...)
+				i = end
+				continue
+			}
+			out = append(out, doc.lines[i])
+			i++
 		}
-		out = append(out, lines[i])
-		i++
+		doc.lines = out
 	}
-	return joinLines(out, trailing)
 }
 
 func formatTableBlock(block []string) []string {

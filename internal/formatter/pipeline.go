@@ -14,30 +14,36 @@ func Apply(input string, passes ...Pass) string {
 
 func HeadingNumbering(opts Options) Pass {
 	return func(input string) string {
-		return Format(input, opts)
+		return applyDocument(input, headingNumberingPass(opts))
 	}
 }
 
 func DocumentFormatting(opts Options) Pass {
 	return func(input string) string {
-		return Apply(input, HeadingNumbering(opts), TableAlignment(), HeadingSpacing())
+		return applyDocument(input, headingNumberingPass(opts), tableAlignmentPass(), headingSpacingPass())
 	}
 }
 
 func DocumentFormattingWithoutHeadingNumbering() Pass {
 	return func(input string) string {
-		return Apply(input, TableAlignment(), HeadingSpacing())
+		return applyDocument(input, tableAlignmentPass(), headingSpacingPass())
 	}
 }
 
 func HeadingNumberRemoval() Pass {
-	return Remove
+	return func(input string) string {
+		return applyDocument(input, headingNumberRemovalPass())
+	}
 }
 
 func TableAlignment() Pass {
-	return FormatTables
+	return func(input string) string {
+		return applyDocument(input, tableAlignmentPass())
+	}
 }
 
 func HeadingSpacing() Pass {
-	return NormalizeHeadingSpacing
+	return func(input string) string {
+		return applyDocument(input, headingSpacingPass())
+	}
 }

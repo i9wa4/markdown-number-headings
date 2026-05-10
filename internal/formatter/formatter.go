@@ -13,77 +13,58 @@ type Options struct {
 var numberedPrefix = regexp.MustCompile(`^\d+(?:\.\d+)*\.?\s+`)
 
 func Format(input string, opts Options) string {
-	if opts.Shift < 0 {
-		opts.Shift = 1
-	}
-	lines, trailing := splitLines(input)
-	counts := make([]int, 6)
-	inFence := false
-	fenceMarker := byte(0)
-
-	for i, line := range lines {
-		if marker, ok := fenceStart(line); ok {
-			if !inFence {
-				inFence = true
-				fenceMarker = marker
-			} else if marker == fenceMarker {
-				inFence = false
-				fenceMarker = 0
-			}
-			continue
-		}
-		if inFence {
-			continue
-		}
-
-		h, ok := parseHeading(line)
-		if !ok || h.level <= opts.Shift {
-			continue
-		}
-		idx := h.level - opts.Shift - 1
-		counts[idx]++
-		for j := idx + 1; j < len(counts); j++ {
-			counts[j] = 0
-		}
-
-		segments := make([]string, idx+1)
-		for j := 0; j <= idx; j++ {
-			segments[j] = strconv.Itoa(counts[j])
-		}
-		title := stripNumber(h.text)
-		lines[i] = h.prefix + strings.Repeat("#", h.level) + " " + strings.Join(segments, ".") + ". " + title + h.close
-	}
-
-	return joinLines(lines, trailing)
+	return applyDocument(input, headingNumberingPass(opts))
 }
 
 func Remove(input string) string {
-	lines, trailing := splitLines(input)
-	inFence := false
-	fenceMarker := byte(0)
+	return applyDocument(input, headingNumberRemovalPass())
+}
 
-	for i, line := range lines {
-		if marker, ok := fenceStart(line); ok {
-			if !inFence {
-				inFence = true
-				fenceMarker = marker
-			} else if marker == fenceMarker {
-				inFence = false
-				fenceMarker = 0
-			}
-			continue
-		}
-		if inFence {
-			continue
-		}
-		h, ok := parseHeading(line)
-		if !ok {
-			continue
-		}
-		lines[i] = h.prefix + strings.Repeat("#", h.level) + " " + stripNumber(h.text) + h.close
+func headingNumberingPass(opts Options) documentPass {
+	if opts.Shift < 0 {
+		opts.Shift = 1
 	}
+	return func(doc *document) {
+		counts := make([]int, 6)
 
-	return joinLines(lines, trailing)
+		for i, line := range doc.lines {
+			if doc.inFence(i) {
+				continue
+			}
+
+			h, ok := parseHeading(line)
+			if !ok || h.level <= opts.Shift {
+				continue
+			}
+			idx := h.level - opts.Shift - 1
+			counts[idx]++
+			for j := idx + 1; j < len(counts); j++ {
+				counts[j] = 0
+			}
+
+			segments := make([]string, idx+1)
+			for j := 0; j <= idx; j++ {
+				segments[j] = strconv.Itoa(counts[j])
+			}
+			title := stripNumber(h.text)
+			doc.lines[i] = h.prefix + strings.Repeat("#", h.level) + " " + strings.Join(segments, ".") + ". " + title + h.close
+		}
+	}
+}
+
+func headingNumberRemovalPass() documentPass {
+	return func(doc *document) {
+		for i, line := range doc.lines {
+			if doc.inFence(i) {
+				continue
+			}
+			h, ok := parseHeading(line)
+			if !ok {
+				continue
+			}
+			doc.lines[i] = h.prefix + strings.Repeat("#", h.level) + " " + stripNumber(h.text) + h.close
+		}
+	}
 }
 
 type heading struct {

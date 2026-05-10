@@ -49,6 +49,44 @@ func TestFormatTablesUsesDisplayWidth(t *testing.T) {
 	}
 }
 
+func TestFormatTablesPreservesFencedTables(t *testing.T) {
+	tests := []struct {
+		name  string
+		fence string
+	}{
+		{name: "backtick", fence: "```"},
+		{name: "tilde", fence: "~~~"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			input := tc.fence + "md\n| A|B |\n|---|---|\n| x|yy|\n" + tc.fence + "\n\n| A|B |\n|---|---|\n| x|yy|\n"
+			want := tc.fence + "md\n| A|B |\n|---|---|\n| x|yy|\n" + tc.fence + "\n\n| A   | B   |\n| --- | --- |\n| x   | yy  |\n"
+			if got := FormatTables(input); got != want {
+				t.Fatalf("FormatTables fenced-table mismatch\nwant:\n%s\ngot:\n%s", want, got)
+			}
+		})
+	}
+}
+
+func TestDocumentFormattingWithoutHeadingNumberingPreservesFencedTables(t *testing.T) {
+	tests := []struct {
+		name  string
+		fence string
+	}{
+		{name: "backtick", fence: "```"},
+		{name: "tilde", fence: "~~~"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			input := tc.fence + "md\n# Ignored\n| A|B |\n|---|---|\n| x|yy|\n" + tc.fence + "\n# Real\n| 名前|Value |\n|---|---|\n| 日本|1|\n"
+			want := tc.fence + "md\n# Ignored\n| A|B |\n|---|---|\n| x|yy|\n" + tc.fence + "\n\n# Real\n\n| 名前 | Value |\n| ---- | ----- |\n| 日本 | 1     |\n"
+			if got := DocumentFormattingWithoutHeadingNumbering()(input); got != want {
+				t.Fatalf("DocumentFormattingWithoutHeadingNumbering fenced-table mismatch\nwant:\n%s\ngot:\n%s", want, got)
+			}
+		})
+	}
+}
+
 func TestNormalizeHeadingSpacingFixture(t *testing.T) {
 	input := readFixture(t, "heading-spacing.input.golden")
 	want := readFixture(t, "heading-spacing.formatted.golden")
