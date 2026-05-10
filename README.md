@@ -10,7 +10,16 @@ environment, CI, and release metadata are present. The compatibility mode keeps
 the current heading behavior stable while future Markdown behavior changes are
 documented separately in `docs/behavior-decisions.md`.
 
-## 1. Install
+## 1. Project Docs
+
+- `CONTRIBUTING.md` covers local development, checks, formatter workflow, and
+  commit expectations.
+- `RELEASING.md` covers tag-based and manual releases, GoReleaser, Nix checks,
+  version metadata, and expected artifacts.
+- `AGENTS.md` and `CLAUDE.md` keep AI-agent guidance aligned with this repo's
+  workflow.
+
+## 2. Install
 
 From this repository:
 
@@ -25,7 +34,7 @@ With Go:
 go install github.com/i9wa4/markdown-formatter/cmd/mdfmt@latest
 ```
 
-## 2. Usage
+## 3. Usage
 
 Format Markdown with the full formatter pipeline:
 
@@ -61,7 +70,7 @@ compatibility paths where available, but new usage should prefer `mdfmt`.
 For existing scripts that only remove heading numbers, use
 `mdfmt remove-numbers --write FILE`.
 
-## 3. Formatter Contract
+## 4. Formatter Contract
 
 - ATX headings with one through six `#` characters are supported.
 - Default formatting runs heading numbering, table alignment, and heading
@@ -83,7 +92,7 @@ For existing scripts that only remove heading numbers, use
 - Lines beginning with seven or more `#` characters are not treated as headings.
 - Setext headings and broader Markdown AST rewrites are non-goals for the MVP.
 
-## 4. Vim Migration
+## 5. Vim Migration
 
 The repository is formatter-only. Vim or Neovim integrations should call the
 CLI instead of duplicating formatter logic.
@@ -99,13 +108,13 @@ Existing command mapping:
 Denops retirement should happen after editor wrappers or user configuration
 examples point at this CLI.
 
-## 5. Development
+## 6. Development
 
 ```sh
 nix develop
 nix fmt
-nix flake check
-nix build
+nix flake check --print-build-logs
+nix build --print-build-logs
 ```
 
 The flake exposes Go, formatter, workflow, Nix, Markdown, YAML, and security
@@ -116,16 +125,12 @@ The pre-commit check surface dogfoods this project by running the flake-built
 installed `mdfmt` binary, and no standalone lint command is part of the public
 CLI.
 
-## 6. Release
+See `CONTRIBUTING.md` for contribution workflow, commit expectations, and
+focused local commands.
+
+## 7. Release
 
 Releases are tag-based or manual through `.github/workflows/release.yml`.
-GoReleaser builds darwin and linux archives for amd64 and arm64, includes
-`README.md` and `LICENSE`, and publishes checksums.
-
-Before publishing:
-
-```sh
-nix flake check
-nix build
-goreleaser check
-```
+GoReleaser publishes platform archives and checksums. See `RELEASING.md` for
+the pre-release checklist, version metadata behavior, and artifact
+expectations.
