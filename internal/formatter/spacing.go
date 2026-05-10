@@ -50,8 +50,7 @@ func headingSpacingPass() documentPass {
 			i++
 		}
 
-		doc.lines = out
-		doc.refreshFences()
+		doc.setLines(out)
 	}
 }
 

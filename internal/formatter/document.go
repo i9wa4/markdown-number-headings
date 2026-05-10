@@ -1,9 +1,10 @@
 package formatter
 
 type document struct {
-	lines    []string
-	trailing bool
-	fenced   []bool
+	lines       []string
+	trailing    bool
+	fenced      []bool
+	fencedDirty bool
 }
 
 type documentPass func(*document)
@@ -35,9 +36,18 @@ func (doc *document) String() string {
 
 func (doc *document) refreshFences() {
 	doc.fenced = mapFenceLines(doc.lines)
+	doc.fencedDirty = false
+}
+
+func (doc *document) setLines(lines []string) {
+	doc.lines = lines
+	doc.fencedDirty = true
 }
 
 func (doc *document) inFence(index int) bool {
+	if doc.fencedDirty {
+		doc.refreshFences()
+	}
 	return index >= 0 && index < len(doc.fenced) && doc.fenced[index]
 }
 
