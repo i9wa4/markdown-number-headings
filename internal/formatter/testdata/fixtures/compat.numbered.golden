@@ -1,0 +1,17 @@
+## 1. Existing
+
+#### 1.0.1. Skipped
+
+```md
+## Ignored
+```
+
+~~~md
+### Ignored
+~~~
+
+## 2. No space
+
+#### 2.0.1. Six hashes? no
+
+####### Too deep
