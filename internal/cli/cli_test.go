@@ -15,10 +15,8 @@ func TestDispatchHelpVersionAndErrors(t *testing.T) {
 		wantOut string
 		wantErr string
 	}{
-		{name: "missing", args: nil, wantErr: "missing command"},
-		{name: "unknown", args: []string{"wat"}, wantErr: "unknown command"},
 		{name: "help", args: []string{"help"}, wantOut: "Usage:"},
-		{name: "version", args: []string{"version"}, wantOut: "markdown-formatter"},
+		{name: "version", args: []string{"version"}, wantOut: "mdfmt"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -46,10 +44,14 @@ func TestFormatRemoveAndTableStdin(t *testing.T) {
 		input string
 		want  string
 	}{
-		{args: []string{"format"}, input: "## One\n### Two\n", want: "## 1. One\n### 1.1. Two\n"},
+		{args: nil, input: "## One\n### Two\n", want: "## 1. One\n\n### 1.1. Two\n"},
+		{args: []string{"format"}, input: "## One\n### Two\n", want: "## 1. One\n\n### 1.1. Two\n"},
 		{args: []string{"format", "--shift", "0"}, input: "# One\n", want: "# 1. One\n"},
+		{args: []string{"--no-heading-numbering"}, input: "# One\nbody\n", want: "# One\n\nbody\n"},
+		{args: []string{"remove-numbers"}, input: "## 1. One\n", want: "## One\n"},
 		{args: []string{"remove"}, input: "## 1. One\n", want: "## One\n"},
 		{args: []string{"table"}, input: "| A|B |\n|---|---|\n| x|yy|\n", want: "| A   | B   |\n| --- | --- |\n| x   | yy  |\n"},
+		{args: []string{"spacing"}, input: "# One\nbody\n## Two\n", want: "# One\n\nbody\n\n## Two\n"},
 	}
 	for _, tc := range tests {
 		var stdout, stderr bytes.Buffer
@@ -62,13 +64,25 @@ func TestFormatRemoveAndTableStdin(t *testing.T) {
 	}
 }
 
+func TestDefaultFormatRunsAllPasses(t *testing.T) {
+	input := "## One\nbody\n| 名前|Value |\n|---|---|\n| 日本|1|\n"
+	want := "## 1. One\n\nbody\n| 名前 | Value |\n| ---- | ----- |\n| 日本 | 1     |\n"
+	var stdout, stderr bytes.Buffer
+	if err := Run(nil, strings.NewReader(input), &stdout, &stderr); err != nil {
+		t.Fatalf("%v stderr=%s", err, stderr.String())
+	}
+	if stdout.String() != want {
+		t.Fatalf("want %q got %q", want, stdout.String())
+	}
+}
+
 func TestFileWriteMode(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "doc.md")
 	if err := os.WriteFile(path, []byte("## One\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	var stdout, stderr bytes.Buffer
-	if err := Run([]string{"format", "--write", path}, strings.NewReader(""), &stdout, &stderr); err != nil {
+	if err := Run([]string{"--write", path}, strings.NewReader(""), &stdout, &stderr); err != nil {
 		t.Fatalf("%v stderr=%s", err, stderr.String())
 	}
 	data, err := os.ReadFile(path)

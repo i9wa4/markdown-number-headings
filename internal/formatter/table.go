@@ -32,8 +32,9 @@ func formatTableBlock(block []string) []string {
 			widths = append(widths, 3)
 		}
 		for j, cell := range cells {
-			if len(cell) > widths[j] {
-				widths[j] = len(cell)
+			width := displayWidth(cell)
+			if width > widths[j] {
+				widths[j] = width
 			}
 		}
 	}
@@ -73,7 +74,7 @@ func formatDataRow(row []string, widths []int) string {
 		if i < len(row) {
 			cell = row[i]
 		}
-		cells[i] = " " + cell + strings.Repeat(" ", widths[i]-len(cell)) + " "
+		cells[i] = " " + cell + strings.Repeat(" ", widths[i]-displayWidth(cell)) + " "
 	}
 	return "|" + strings.Join(cells, "|") + "|"
 }
@@ -129,4 +130,28 @@ func alignmentFor(cell string) string {
 	default:
 		return "---"
 	}
+}
+
+func displayWidth(s string) int {
+	width := 0
+	for _, r := range s {
+		if isWideRune(r) {
+			width += 2
+			continue
+		}
+		width++
+	}
+	return width
+}
+
+func isWideRune(r rune) bool {
+	return (r >= 0x1100 && r <= 0x115F) ||
+		(r >= 0x2329 && r <= 0x232A) ||
+		(r >= 0x2E80 && r <= 0xA4CF) ||
+		(r >= 0xAC00 && r <= 0xD7A3) ||
+		(r >= 0xF900 && r <= 0xFAFF) ||
+		(r >= 0xFE10 && r <= 0xFE19) ||
+		(r >= 0xFE30 && r <= 0xFE6F) ||
+		(r >= 0xFF00 && r <= 0xFF60) ||
+		(r >= 0xFFE0 && r <= 0xFFE6)
 }

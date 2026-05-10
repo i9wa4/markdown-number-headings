@@ -86,6 +86,7 @@
             else
               "dev";
           commit = if (builtins.hasAttr "rev" self) then builtins.substring 0 7 self.rev else "unknown";
+          markdownFormatter = "${self'.packages.default}/bin/mdfmt";
           rumdlConfig = pkgs.writeText "rumdl.toml" ''
             disable = ["MD041"]
 
@@ -185,6 +186,10 @@
             inherit version;
             src = ./.;
             vendorHash = null;
+            subPackages = [
+              "."
+              "cmd/mdfmt"
+            ];
             ldflags = [
               "-s"
               "-w"
@@ -303,6 +308,12 @@
               rumdl-check = {
                 enable = true;
                 entry = "${pkgs.rumdl}/bin/rumdl check --config ${rumdlConfig}";
+                types = [ "markdown" ];
+              };
+              mdfmt-format = {
+                enable = true;
+                name = "mdfmt format";
+                entry = "${markdownFormatter} --write";
                 types = [ "markdown" ];
               };
 

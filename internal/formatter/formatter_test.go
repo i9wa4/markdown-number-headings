@@ -41,6 +41,83 @@ func TestFormatTables(t *testing.T) {
 	}
 }
 
+func TestFormatTablesUsesDisplayWidth(t *testing.T) {
+	input := "| Name | Value |\n| --- | --- |\n| 日本 | 1 |\n| Go | 20 |\n"
+	want := "| Name | Value |\n| ---- | ----- |\n| 日本 | 1     |\n| Go   | 20    |\n"
+	if got := FormatTables(input); got != want {
+		t.Fatalf("FormatTables display-width mismatch\nwant:\n%s\ngot:\n%s", want, got)
+	}
+}
+
+func TestNormalizeHeadingSpacingFixture(t *testing.T) {
+	input := readFixture(t, "heading-spacing.input.golden")
+	want := readFixture(t, "heading-spacing.formatted.golden")
+	if got := NormalizeHeadingSpacing(input); got != want {
+		t.Fatalf("NormalizeHeadingSpacing mismatch\nwant:\n%s\ngot:\n%s", want, got)
+	}
+}
+
+func TestNormalizeHeadingSpacingBoundaries(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "heading at file start",
+			input: "# Title\nbody\n",
+			want:  "# Title\n\nbody\n",
+		},
+		{
+			name:  "heading at eof",
+			input: "body\n# End\n",
+			want:  "body\n\n# End\n",
+		},
+		{
+			name:  "heading followed by body",
+			input: "## Section\nbody\n",
+			want:  "## Section\n\nbody\n",
+		},
+		{
+			name:  "body followed by heading",
+			input: "body\n## Section\n",
+			want:  "body\n\n## Section\n",
+		},
+		{
+			name:  "adjacent headings",
+			input: "# One\n## Two\n",
+			want:  "# One\n\n## Two\n",
+		},
+		{
+			name:  "multiple blank lines",
+			input: "# One\n\n\nbody\n\n\n## Two\n\n\ntext\n",
+			want:  "# One\n\nbody\n\n## Two\n\ntext\n",
+		},
+		{
+			name:  "one blank line unchanged",
+			input: "# One\n\nbody\n\n## Two\n\ntext\n",
+			want:  "# One\n\nbody\n\n## Two\n\ntext\n",
+		},
+		{
+			name:  "no blank lines",
+			input: "# One\nbody\n## Two\ntext\n",
+			want:  "# One\n\nbody\n\n## Two\n\ntext\n",
+		},
+		{
+			name:  "fenced code headings",
+			input: "```md\n# Ignored\nbody\n```\n# Real\nbody\n",
+			want:  "```md\n# Ignored\nbody\n```\n\n# Real\n\nbody\n",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := NormalizeHeadingSpacing(tc.input); got != tc.want {
+				t.Fatalf("want %q got %q", tc.want, got)
+			}
+		})
+	}
+}
+
 func readFixture(t *testing.T, name string) string {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join("testdata", "fixtures", name))

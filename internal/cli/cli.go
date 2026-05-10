@@ -13,8 +13,7 @@ import (
 
 func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		writeUsage(stderr)
-		return fmt.Errorf("missing command: use format, remove, table, help, or version")
+		return runDocumentFormat(args, stdin, stdout)
 	}
 
 	switch args[0] {
@@ -22,24 +21,46 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		writeUsage(stdout)
 		return nil
 	case "version", "--version":
-		fmt.Fprintf(stdout, "markdown-formatter %s (%s)\n", version.Version, version.Commit)
+		fmt.Fprintf(stdout, "mdfmt %s (%s)\n", version.Version, version.Commit)
 		return nil
 	case "format":
-		return runTransform(args[1:], stdin, stdout, formatter.Format)
-	case "remove":
-		return runTransform(args[1:], stdin, stdout, func(input string, _ formatter.Options) string {
-			return formatter.Remove(input)
+		return runDocumentFormat(args[1:], stdin, stdout)
+	case "remove-numbers", "remove":
+		return runTransform(args[1:], stdin, stdout, func(_ formatter.Options) formatter.Pass {
+			return formatter.HeadingNumberRemoval()
 		})
+	case "spacing":
+		return runSimple(args[1:], stdin, stdout, "mdfmt spacing", formatter.HeadingSpacing())
 	case "table":
-		return runTable(args[1:], stdin, stdout)
+		return runSimple(args[1:], stdin, stdout, "mdfmt table", formatter.TableAlignment())
 	default:
-		writeUsage(stderr)
-		return fmt.Errorf("unknown command %q: use format, remove, table, help, or version", args[0])
+		return runDocumentFormat(args, stdin, stdout)
 	}
 }
 
-func runTransform(args []string, stdin io.Reader, stdout io.Writer, transform func(string, formatter.Options) string) error {
-	fs := flag.NewFlagSet("markdown-formatter", flag.ContinueOnError)
+func runDocumentFormat(args []string, stdin io.Reader, stdout io.Writer) error {
+	fs := flag.NewFlagSet("mdfmt", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	shift := fs.Int("shift", 1, "heading level shift")
+	noHeadingNumbering := fs.Bool("no-heading-numbering", false, "skip heading numbering")
+	write := fs.Bool("write", false, "write files in place")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *shift < 0 || *shift > 5 {
+		return fmt.Errorf("invalid shift %s: expected an integer from 0 to 5", strconv.Itoa(*shift))
+	}
+	pass := formatter.DocumentFormatting(formatter.Options{Shift: *shift})
+	if *noHeadingNumbering {
+		pass = formatter.DocumentFormattingWithoutHeadingNumbering()
+	}
+	return apply(fs.Args(), stdin, stdout, *write, func(input string) string {
+		return formatter.Apply(input, pass)
+	})
+}
+
+func runTransform(args []string, stdin io.Reader, stdout io.Writer, passForOptions func(formatter.Options) formatter.Pass) error {
+	fs := flag.NewFlagSet("mdfmt", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	shift := fs.Int("shift", 1, "heading level shift")
 	write := fs.Bool("write", false, "write files in place")
@@ -50,18 +71,20 @@ func runTransform(args []string, stdin io.Reader, stdout io.Writer, transform fu
 		return fmt.Errorf("invalid shift %s: expected an integer from 0 to 5", strconv.Itoa(*shift))
 	}
 	return apply(fs.Args(), stdin, stdout, *write, func(input string) string {
-		return transform(input, formatter.Options{Shift: *shift})
+		return formatter.Apply(input, passForOptions(formatter.Options{Shift: *shift}))
 	})
 }
 
-func runTable(args []string, stdin io.Reader, stdout io.Writer) error {
-	fs := flag.NewFlagSet("markdown-formatter table", flag.ContinueOnError)
+func runSimple(args []string, stdin io.Reader, stdout io.Writer, command string, pass formatter.Pass) error {
+	fs := flag.NewFlagSet(command, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	write := fs.Bool("write", false, "write files in place")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	return apply(fs.Args(), stdin, stdout, *write, formatter.FormatTables)
+	return apply(fs.Args(), stdin, stdout, *write, func(input string) string {
+		return formatter.Apply(input, pass)
+	})
 }
 
 func apply(paths []string, stdin io.Reader, stdout io.Writer, write bool, transform func(string) string) error {
@@ -103,19 +126,16 @@ func apply(paths []string, stdin io.Reader, stdout io.Writer, write bool, transf
 }
 
 func writeUsage(w io.Writer) {
-	fmt.Fprint(w, `markdown-formatter formats Markdown headings and tables.
+	fmt.Fprint(w, `mdfmt formats Markdown headings, spacing, and tables.
 
 Usage:
-  markdown-formatter format [--shift N] [--write] [FILE...]
-  markdown-formatter remove [--write] [FILE...]
-  markdown-formatter table [--write] [FILE...]
-  markdown-formatter version
-  markdown-formatter help
+  mdfmt [--shift N] [--no-heading-numbering] [--write] [FILE...]
+  mdfmt help
+  mdfmt version
 
 Examples:
-  markdown-formatter format < README.md
-  markdown-formatter format --shift 0 --write docs/page.md
-  markdown-formatter remove --write docs/page.md
-  markdown-formatter table --write README.md
+  mdfmt < README.md
+  mdfmt --write README.md docs/behavior-decisions.md
+  mdfmt --no-heading-numbering --write README.md
 `)
 }
