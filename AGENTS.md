@@ -6,6 +6,9 @@ This repository is a Go Markdown formatter project. Keep changes focused on
 `mdfmt`, its formatter package, Nix workflow, GitHub Actions, and concise
 repository documentation.
 
+`CLAUDE.md` is a regular file whose body is exactly `@AGENTS.md`, so this file
+is the single source of truth for agent guidance.
+
 ## 2. Development Rules
 
 - Prefer existing Go, Nix, and GitHub Actions patterns already in the repo.

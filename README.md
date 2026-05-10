@@ -16,8 +16,8 @@ documented separately in `docs/behavior-decisions.md`.
   commit expectations.
 - `RELEASING.md` covers tag-based and manual releases, GoReleaser, Nix checks,
   version metadata, and expected artifacts.
-- `AGENTS.md` and `CLAUDE.md` keep AI-agent guidance aligned with this repo's
-  workflow.
+- `AGENTS.md` keeps AI-agent guidance aligned with this repo's workflow, and
+  `CLAUDE.md` points compatible tooling to it.
 
 ## 2. Install
 

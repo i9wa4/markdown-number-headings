@@ -51,6 +51,8 @@ when changing Go versions.
 
 The primary CI workflow is `.github/workflows/ci.yml` with workflow name `ci`.
 It runs Nix checks, Nix build, Go vulnerability checks, and secret scanning.
+`AGENTS.md` is the source of truth for agent guidance, and `CLAUDE.md` points
+Claude-compatible tooling to it.
 
 ## 4. Commit Expectations
 
